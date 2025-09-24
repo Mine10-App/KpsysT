@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Management</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<style>
+:root {
+  --gold-light: #f7e8c8;
+  --gold-primary: #d4af37;
+  --gold-dark: #b8941f;
+  --gold-accent: #ffd700;
+  --white: #ffffff;
+  --off-white: #f9f9f9;
+  --light-gray: #f0f0f0;
+  --dark: #2c3e50;
+  --gray: #7f8c8d;
+  --success: #27ae60;
+  --success-dark: #1e8449;
+  --warning: #e74c3c;
+  --warning-dark: #c0392b;
+  --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  --radius: 8px;
+  --transition: all 0.3s ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #fefefe 0%, var(--gold-light) 100%);
+  color: #5d4d0f;
+  line-height: 1.6;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gold-light);
+}
+
+.header-content {
+  flex: 1;
+}
+
+h1 {
+  color: var(--gold-dark);
+  margin-bottom: 10px;
+  font-weight: 600;
+  font-size: 2rem;
+}
+
+.subtitle {
+  color: #8a7c4a;
+  font-size: 1.1rem;
+}
+
+.dashboard-btn {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+
+.dashboard-btn:hover {
+  background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-primary) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(212, 175, 55, 0.3);
+}
+
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 25px;
+  margin-bottom: 25px;
+  border: 1px solid var(--gold-light);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--gold-light);
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--gold-dark);
+}
+
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.status-open {
+  background-color: rgba(39, 174, 96, 0.2);
+  color: var(--success);
+  border-color: rgba(39, 174, 96, 0.3);
+}
+
+.status-close {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--warning);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.status-unknown {
+  background-color: rgba(212, 175, 55, 0.2);
+  color: var(--gold-dark);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.9rem;
+  color: #8a7c4a;
+  margin-bottom: 5px;
+}
+
+.info-value {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  background-color: var(--light-gray);
+  color: #8a7c4a;
+  cursor: not-allowed;
+  opacity: 0.6;
+  border-color: var(--light-gray);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+  color: white;
+  border-color: var(--gold-dark);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-primary) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
+  color: white;
+  border-color: var(--success);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--success-dark) 0%, var(--success) 100%);
+  transform: translateY(-2px);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%);
+  color: white;
+  border-color: var(--warning);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--warning-dark) 0%, var(--warning) 100%);
+  transform: translateY(-2px);
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(212, 175, 55, 0.5);
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background-color: white;
+  margin: 10% auto;
+  padding: 0;
+  width: 90%;
+  max-width: 450px;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
+  animation: slideIn 0.3s ease;
+  overflow: hidden;
+  border: 2px solid var(--gold-primary);
+}
+
+.modal-header {
+  padding: 20px 25px;
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #5d4d0f;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid var(--gold-light);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  transition: border-color 0.3s;
+  background-color: #fefcf5;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+
+.modal-footer {
+  padding: 20px 25px;
+  border-top: 1px solid var(--gold-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background-color: #fef8e7;
+}
+
+#modalMessage {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: var(--radius);
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.message-success {
+  background-color: rgba(39, 174, 96, 0.2);
+  color: var(--success);
+  border-color: rgba(39, 174, 96, 0.3);
+}
+
+.message-error {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--warning);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.loading {
+  color: #8a7c4a;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    justify-content: center;
+  }
+  
+  .modal-content {
+    margin: 5% auto;
+    width: 95%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-content">
+      <h1>Shift Management</h1>
+      <p class="subtitle">Monitor and manage shift operations in real-time</p>
+    </div>
+    <a href="dashboard.html" class="dashboard-btn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M1 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V4zM1 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V9zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V9z"/>
+      </svg>
+      Dashboard
+    </a>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Current Shift Information</h2>
+        <span id="shiftStatusBadge" class="status-badge">Loading...</span>
+      </div>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Shift</span>
+          <span id="shift" class="info-value loading">Loading...</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">Shift Date</span>
+          <span id="shiftDate" class="info-value loading">Loading...</span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">Status</span>
+          <span id="shiftStatus" class="info-value loading">Loading...</span>
+        </div>
+      </div>
+    </section>
+    
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Shift Actions</h2>
+      </div>
+      
+      <div class="actions">
+        <button id="openBtn" class="btn btn-primary" disabled>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM7 7V3h2v4h4v2H9v4H7V9H3V7h4z"/>
+          </svg>
+          Open Shift
+        </button>
+        
+        <button id="closeBtn" class="btn btn-warning" disabled>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM5 7a1 1 0 0 1 0-2h6a1 1 0 0 1 0 2H5z"/>
+          </svg>
+          Close Shift
+        </button>
+        
+        <button id="reopenBtn" class="btn btn-secondary" disabled>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+          </svg>
+          Reopen Shift
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Reopen Modal -->
+<div id="reopenModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Reopen Shift</h3>
+      <button class="close-btn" id="closeModal">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="shiftNoSelect" class="form-label">Shift Number</label>
+        <select id="shiftNoSelect" class="form-control">
+          <option value="1">Shift 1</option>
+          <option value="2">Shift 2</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="modalUsername" class="form-label">Username</label>
+        <input type="text" id="modalUsername" class="form-control" placeholder="Enter your username">
+      </div>
+      
+      <div class="form-group">
+        <label for="modalPassword" class="form-label">Password</label>
+        <input type="password" id="modalPassword" class="form-control" placeholder="Enter your password">
+      </div>
+      
+      <div id="modalMessage"></div>
+    </div>
+    
+    <div class="modal-footer">
+      <button id="modalReopenBtn" class="btn btn-secondary">Reopen Shift</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Mock Firebase for demonstration
+const firebase = {
+  firestore: () => ({
+    collection: () => ({
+      orderBy: () => ({
+        limit: () => ({
+          get: () => Promise.resolve({
+            empty: false,
+            docs: [{
+              id: 'shift123',
+              data: () => ({
+                shiftNo: 1,
+                CurrentDate: { toDate: () => new Date() },
+                status: 'open'
+              })
+            }]
+          })
+        })
+      }),
+      doc: () => ({
+        update: () => Promise.resolve()
+      }),
+      where: () => ({
+        limit: () => ({
+          get: () => Promise.resolve({
+            empty: false,
+            docs: [{
+              id: 'shift123',
+              data: () => ({
+                shiftNo: 1,
+                CurrentDate: { toDate: () => new Date() },
+                status: 'close'
+              })
+            }]
+          })
+        })
+      })
+    })
+  })
+};
+
+// Mock users array
+const users = [
+  { username: 'admin', password: 'admin123', Level: 'Supervisor' },
+  { username: 'user', password: 'user123', Level: 'User' }
+];
+
+// DOM elements
+const shiftField = document.getElementById("shift");
+const dateField = document.getElementById("shiftDate");
+const statusField = document.getElementById("shiftStatus");
+const statusBadge = document.getElementById("shiftStatusBadge");
+
+const openBtn = document.getElementById("openBtn");
+const closeBtn = document.getElementById("closeBtn");
+const reopenBtn = document.getElementById("reopenBtn");
+
+let currentShiftDocId = null;
+let currentShiftData = null;
+
+// Modal elements
+const modal = document.getElementById("reopenModal");
+const closeModalBtn = document.getElementById("closeModal");
+const shiftNoSelect = document.getElementById("shiftNoSelect");
+const modalUsername = document.getElementById("modalUsername");
+const modalPassword = document.getElementById("modalPassword");
+const modalReopenBtn = document.getElementById("modalReopenBtn");
+const modalMessage = document.getElementById("modalMessage");
+
+// Update status badge appearance
+function updateStatusBadge(status) {
+  statusBadge.textContent = status;
+  statusBadge.className = `status-badge status-${status.toLowerCase()}`;
+}
+
+// ---------- Fetch Shift Info ----------
+async function fetchShiftInfo() {
+  try {
+    const shiftsRef = firebase.firestore().collection("shifts");
+    const snapshot = await shiftsRef.orderBy("CurrentDate", "desc").limit(1).get();
+
+    if (snapshot.empty) {
+      shiftField.textContent = "-";
+      dateField.textContent = "-";
+      statusField.textContent = "-";
+      updateStatusBadge("Unknown");
+      return;
+    }
+
+    const doc = snapshot.docs[0];
+    currentShiftDocId = doc.id;
+    currentShiftData = doc.data();
+
+    const shiftNo = currentShiftData.shiftNo;
+    const currentDate = currentShiftData.CurrentDate.toDate();
+    const status = currentShiftData.status;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const shiftDay = new Date(currentDate); shiftDay.setHours(0,0,0,0);
+
+    // Display Morning/Evening instead of 1/2
+    shiftField.textContent = shiftNo === 1 ? "Morning" : 
+                             shiftNo === 2 ? "Evening" : shiftNo;
+
+    dateField.textContent = shiftDay.toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" });
+    statusField.textContent = status;
+    updateStatusBadge(status);
+
+    openBtn.disabled = true;
+    closeBtn.disabled = true;
+    reopenBtn.disabled = true;
+
+    // Remove loading class
+    shiftField.classList.remove("loading");
+    dateField.classList.remove("loading");
+    statusField.classList.remove("loading");
+
+    // ---------- Button logic ----------
+    if (shiftDay.getTime() === today.getTime()) {
+      if (shiftNo === 1 && status.toLowerCase() === "open") closeBtn.disabled = false;
+      else if (shiftNo === 1 && status.toLowerCase() === "close") openBtn.disabled = false;
+      else if (shiftNo === 2 && status.toLowerCase() === "open") closeBtn.disabled = false;
+      else if (shiftNo === 2 && status.toLowerCase() === "close") reopenBtn.disabled = false;
+    } else if (shiftDay.getTime() < today.getTime() && shiftNo === 2 && status.toLowerCase() === "close") {
+      openBtn.disabled = false;
+    }
+
+  } catch (error) {
+    console.error("Error fetching shift info:", error);
+    shiftField.textContent = "Error";
+    dateField.textContent = "Error";
+    statusField.textContent = "Error";
+    updateStatusBadge("Error");
+  }
+}
+
+// ---------- Update Shift Status ----------
+async function updateShiftStatus(newStatus) {
+  if (!currentShiftDocId) return;
+
+  try {
+    const shiftRef = firebase.firestore().collection("shifts").doc(currentShiftDocId);
+    let updatedData = { status: newStatus };
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const shiftDate = currentShiftData.CurrentDate.toDate(); shiftDate.setHours(0,0,0,0);
+
+    if (newStatus.toLowerCase() === "open") {
+      if (shiftDate.getTime() === today.getTime() && currentShiftData.shiftNo === 1) updatedData.shiftNo = 2;
+      else if (shiftDate.getTime() < today.getTime() && currentShiftData.shiftNo === 2) {
+        updatedData.shiftNo = 1;
+        updatedData.CurrentDate = { toDate: () => today }; // Mock timestamp
+      }
+    }
+
+    await shiftRef.update(updatedData);
+    fetchShiftInfo();
+
+  } catch (error) {
+    console.error("Error updating shift:", error);
+    alert("Failed to update shift.");
+  }
+}
+
+// ---------- Button Events ----------
+openBtn.addEventListener("click", () => updateShiftStatus("open"));
+closeBtn.addEventListener("click", () => updateShiftStatus("close"));
+reopenBtn.addEventListener("click", () => {
+  modal.style.display = "block";
+  modalMessage.textContent = "";
+  modalMessage.className = "";
+  modalUsername.value = "";
+  modalPassword.value = "";
+});
+
+// ---------- Modal Events ----------
+closeModalBtn.addEventListener("click", () => { modal.style.display = "none"; });
+
+// Close modal when clicking outside
+window.addEventListener("click", (event) => {
+  if (event.target === modal) {
+    modal.style.display = "none";
+  }
+});
+
+modalReopenBtn.addEventListener("click", async () => {
+  modalMessage.textContent = "";
+  modalMessage.className = "";
+  const selectedShift = parseInt(shiftNoSelect.value);
+  const username = modalUsername.value.trim();
+  const password = modalPassword.value;
+
+  if (!username || !password) { 
+    modalMessage.textContent = "Please enter both username and password"; 
+    modalMessage.className = "message-error";
+    return; 
+  }
+
+  const user = users.find(u => u.username === username && u.password === password);
+  if (!user) { 
+    modalMessage.textContent = "Invalid username or password"; 
+    modalMessage.className = "message-error";
+    return; 
+  }
+  if (user.Level !== "Supervisor") { 
+    modalMessage.textContent = "Only Supervisor can reopen shifts"; 
+    modalMessage.className = "message-error";
+    return; 
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  try {
+    const shiftsRef = firebase.firestore().collection("shifts");
+
+    const snapshot = await shiftsRef
+      .where("shiftNo", "==", selectedShift)
+      .where("CurrentDate", "==", { toDate: () => today }) // Mock timestamp
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      // ✅ Only update existing document
+      const shiftDocId = snapshot.docs[0].id;
+      await shiftsRef.doc(shiftDocId).update({
+        status: "open",
+        user: user.username
+      });
+
+      modalMessage.className = "message-success";
+      modalMessage.textContent = `Shift ${selectedShift} reopened successfully!`;
+      fetchShiftInfo();
+      setTimeout(() => modal.style.display = "none", 1500);
+
+    } else {
+      // ❌ Don't create a new document
+      modalMessage.className = "message-error";
+      modalMessage.textContent = `Shift ${selectedShift} for today does not exist.`;
+    }
+
+  } catch (err) {
+    console.error(err);
+    modalMessage.className = "message-error";
+    modalMessage.textContent = "Failed to reopen shift. Please try again.";
+  }
+});
+
+// ---------- Initial Load ----------
+fetchShiftInfo();
+</script>
+
+</body>
+</html>
